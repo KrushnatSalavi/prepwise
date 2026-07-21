@@ -18,12 +18,11 @@ const Page = () => {
           <p className='text-lg'>
             Practice on real interview question & get feedback
           </p>
-          <Button asChild className="btn-primary max-sm:w-full">
-
-              <Link href={"/interview"}>Start an Interview</Link>
-
-
-          </Button>
+          <Link href="/interview">
+            <Button>
+              Start Interview
+            </Button>
+          </Link>
 
         </div>
 
