@@ -18,6 +18,12 @@ const initFirebaseAdmin = () => {
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
+    // Debug info (avoid printing the full key)
+    console.debug("FIREBASE_PRIVATE_KEY present:", !!privateKey);
+    console.debug("FIREBASE_PRIVATE_KEY contains BEGIN:", privateKey?.includes("-----BEGIN"));
+    console.debug("FIREBASE_PRIVATE_KEY contains escaped \\n+:", privateKey?.includes("\\n"));
+    console.debug("FIREBASE_PRIVATE_KEY length:", privateKey?.length ?? 0);
+
     if (!projectId || !clientEmail || !privateKey) {
       console.warn("Firebase Admin credentials not found in env; skipping initialization.");
       return { auth: null as any, db: null as any };
