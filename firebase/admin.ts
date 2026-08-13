@@ -29,10 +29,15 @@ const initFirebaseAdmin = () => {
       return { auth: null as any, db: null as any };
     }
 
-    // Handle common encodings of the private key
+    // Normalize private key: strip surrounding quotes, convert escaped newlines, normalize CRLF
+    privateKey = privateKey.trim();
+    if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
+      privateKey = privateKey.slice(1, -1);
+    }
     if (privateKey.includes("\\n")) {
       privateKey = privateKey.replace(/\\n/g, "\n");
     }
+    privateKey = privateKey.replace(/\r\n/g, "\n");
 
     // If looks like base64 (no spaces, contains = at end), try decoding
     if (!privateKey.includes("-----BEGIN") && /^[A-Za-z0-9+/=\r\n]+$/.test(privateKey)) {
@@ -45,6 +50,7 @@ const initFirebaseAdmin = () => {
     }
 
     try {
+      console.debug("Initializing Firebase Admin with privateKey preview:", privateKey.slice(0, 30).replace(/\n/g, "\\n") + "...");
       initializeApp({
         credential: cert({
           projectId,
@@ -64,4 +70,18 @@ const initFirebaseAdmin = () => {
   };
 };
 
-export const { auth, db } = initFirebaseAdmin();
+let _auth: ReturnType<typeof getAuth> | null = null;
+let _db: ReturnType<typeof getFirestore> | null = null;
+
+export function getAdmin() {
+  if (typeof window !== "undefined") {
+    throw new Error("Firebase Admin SDK should only be used on the server.");
+  }
+
+  if (_auth && _db) return { auth: _auth, db: _db };
+
+  const { auth, db } = initFirebaseAdmin();
+  _auth = auth;
+  _db = db;
+  return { auth, db };
+}
