@@ -2,14 +2,45 @@ import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 
 import { db } from "@/firebase/admin";
+import { GEMINI_MODEL } from "@/lib/config";
 import { getRandomInterviewCover } from "@/lib/utils";
+
+// Gemini sometimes wraps the JSON in ```json fences - strip them before parsing
+function parseQuestions(raw: string): string[] {
+  const cleaned = raw.replace(/```json|```/gi, "").trim();
+  const start = cleaned.indexOf("[");
+  const end = cleaned.lastIndexOf("]");
+  const json =
+    start !== -1 && end > start ? cleaned.slice(start, end + 1) : cleaned;
+
+  const parsed = JSON.parse(json);
+  if (!Array.isArray(parsed)) {
+    throw new Error("Model did not return a list of questions");
+  }
+  return parsed.map(String);
+}
 
 export async function POST(request: Request) {
   const { type, role, level, techstack, amount, userid } = await request.json();
 
+  if (!role || !level || !techstack || !amount || !userid) {
+    console.error("Missing fields from Vapi:", {
+      type,
+      role,
+      level,
+      techstack,
+      amount,
+      userid,
+    });
+    return Response.json(
+      { success: false, error: "Missing required fields (check userid)" },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { text: questions } = await generateText({
-      model: google("gemini-2.0-flash-001"),
+    const { text } = await generateText({
+      model: google(GEMINI_MODEL),
       prompt: `Prepare questions for a job interview.
         The job role is ${role}.
         The job experience level is ${level}.
@@ -20,17 +51,21 @@ export async function POST(request: Request) {
         The questions are going to be read by a voice assistant so do not use "/" or "*" or any other special characters which might break the voice assistant.
         Return the questions formatted like this:
         ["Question 1", "Question 2", "Question 3"]
-        
-        Thank you! <3
     `,
     });
 
+    const techList = (
+      Array.isArray(techstack) ? techstack : String(techstack).split(",")
+    )
+      .map((t: string) => t.trim())
+      .filter(Boolean);
+
     const interview = {
-      role: role,
-      type: type,
-      level: level,
-      techstack: techstack.split(","),
-      questions: JSON.parse(questions),
+      role,
+      type,
+      level,
+      techstack: techList,
+      questions: parseQuestions(text),
       userId: userid,
       finalized: true,
       coverImage: getRandomInterviewCover(),
@@ -42,7 +77,13 @@ export async function POST(request: Request) {
     return Response.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("Error:", error);
-    return Response.json({ success: false, error: error }, { status: 500 });
+    return Response.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
   }
 }
 

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 
-import { Button } from "@/components/ui/button";
 import InterviewCard from "@/components/InterviewCard";
 
 import { getCurrentUser } from "@/lib/actions/auth.action";
@@ -30,9 +29,12 @@ async function Home() {
             Practice real interview questions & get instant feedback
           </p>
 
-          <Button asChild className="btn-primary max-sm:w-full">
-            <Link href="/interview">Start an Interview</Link>
-          </Button>
+          <Link
+            href="/interview"
+            className="btn-primary max-sm:w-full inline-flex items-center justify-center text-sm"
+          >
+            Start an Interview
+          </Link>
         </div>
 
         <Image
